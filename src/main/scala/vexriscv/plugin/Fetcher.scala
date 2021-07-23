@@ -448,41 +448,39 @@ abstract class IBusFetcherImpl(val resetVector : BigInt,
     val predictor = prediction match {
       case NONE =>
       case STATIC | DYNAMIC => {
-        def historyWidth = 2
         val dynamic = ifGen(prediction == DYNAMIC) (new Area {
-          case class BranchPredictorLine()  extends Bundle{
-            val history = SInt(historyWidth bits)
-          }
-
-          val historyCache = Mem(BranchPredictorLine(), 1 << historyRamSizeLog2)
-          val historyWrite = historyCache.writePort
-          val historyWriteLast = RegNextWhen(historyWrite, iBusRsp.stages(0).output.ready)
-          val hazard = historyWriteLast.valid && historyWriteLast.address === (iBusRsp.stages(0).input.payload >> 2).resized
 
           case class DynamicContext() extends Bundle{
             val hazard = Bool
-            val line = BranchPredictorLine()
           }
           val fetchContext = DynamicContext()
-          fetchContext.hazard := hazard
-          fetchContext.line := historyCache.readSync((fetchPc.output.payload >> 2).resized, iBusRsp.stages(0).output.ready || externalFlush)
+          fetchContext.hazard := False
 
           object PREDICTION_CONTEXT extends Stageable(DynamicContext())
           decode.insert(PREDICTION_CONTEXT) := stage1ToInjectorPipe(fetchContext)._3
-          val decodeContextPrediction = decode.input(PREDICTION_CONTEXT).line.history.msb
 
-          val branchStage = decodePrediction.stage
-          val branchContext = branchStage.input(PREDICTION_CONTEXT)
-          val moreJump = decodePrediction.rsp.wasWrong ^ branchContext.line.history.msb
 
-          historyWrite.address := branchStage.input(PC)(2, historyRamSizeLog2 bits) + (if(pipeline.config.withRvc)
+
+
+
+
+          val decodeContextPrediction = False // Prediction here
+
+
+
+
+          // val branchStage = decodePrediction.stage
+          // val branchContext = branchStage.input(PREDICTION_CONTEXT)
+          //val moreJump = decodePrediction.rsp.wasWrong ^ branchContext.line.history.msb
+
+          /*historyWrite.address := branchStage.input(PC)(2, historyRamSizeLog2 bits) + (if(pipeline.config.withRvc)
             ((!branchStage.input(IS_RVC) && branchStage.input(PC)(1)) ? U(1) | U(0))
           else
-            U(0))
+            U(0))*/
 
-          historyWrite.data.history := branchContext.line.history + (moreJump ? S(-1) | S(1))
-          val sat = (branchContext.line.history === (moreJump ? S(branchContext.line.history.minValue) | S(branchContext.line.history.maxValue)))
-          historyWrite.valid := !branchContext.hazard && branchStage.arbitration.isFiring && branchStage.input(BRANCH_CTRL) === BranchCtrlEnum.B && !sat
+          // historyWrite.data.history := branchContext.line.history + (moreJump ? S(-1) | S(1))
+          //  val sat = (branchContext.line.history === (moreJump ? S(branchContext.line.history.minValue) | S(branchContext.line.history.maxValue)))
+          //historyWrite.valid := !branchContext.hazard && branchStage.arbitration.isFiring && branchStage.input(BRANCH_CTRL) === BranchCtrlEnum.B //&& !sat
         })
 
 
