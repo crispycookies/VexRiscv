@@ -471,7 +471,7 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
           }
 
           //val perceptron = new predictor_jimenez(32, 62, 2, 10, 10, -1, 1, 0, 1, 127)
-          val perceptron = new predictor(32, 62, 2, 10, 10, -1, 1, 0, 1)
+          val perceptron = new predictor(32, 62, 16, 10, 10, -1, 1, 0, 2)
 
           val historyCache = Mem(BranchPredictorLine(), 1 << historyRamSizeLog2)
           val historyWrite = historyCache.writePort
@@ -496,7 +496,17 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
 
           val branchStage = decodePrediction.stage
           val branchContext = branchStage.input(PREDICTION_CONTEXT)
-          val moreJump = decodePrediction.rsp.wasWrong && branchContext.prediction
+          val moreJump = decodePrediction.rsp.wasWrong ^ branchContext.prediction
+
+          when(decodePrediction.rsp.wasWrong && branchContext.prediction) {
+            perceptron.io.taken := 1
+          } otherwise {
+            when (decodePrediction.rsp.wasWrong && branchContext.prediction === False) {
+              perceptron.io.taken := 1
+            } otherwise {
+              perceptron.io.taken := 0
+            }
+          }
 
           val addr = branchStage.input(PC)(2, historyRamSizeLog2 bits) + (if (pipeline.config.withRvc)
             ((!branchStage.input(IS_RVC) && branchStage.input(PC)(1)) ? U(1) | U(0))
@@ -508,10 +518,9 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
           historyWrite.data.history := branchContext.line.history + (moreJump ? S(-1) | S(1))
 
           perceptron.io.address := addr
-          perceptron.io.taken := moreJump ? U(1) | U(0)
 
           //val sat = (branchContext.line.history === (moreJump ? S(branchContext.line.history.minValue) | S(branchContext.line.history.maxValue)))
-          historyWrite.valid := !branchContext.hazard && branchStage.arbitration.isFiring && branchStage.input(BRANCH_CTRL) === BranchCtrlEnum.B && perceptron.io.prediction =/= 1
+          historyWrite.valid := !branchContext.hazard && branchStage.arbitration.isFiring && branchStage.input(BRANCH_CTRL) === BranchCtrlEnum.B && perceptron.io.prediction === 1
         })
 
 
