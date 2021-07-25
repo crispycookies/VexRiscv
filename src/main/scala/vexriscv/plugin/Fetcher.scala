@@ -5,8 +5,7 @@ import spinal.core._
 import spinal.lib._
 import vexriscv.Riscv.IMM
 import StreamVexPimper._
-import percytheperceptron.predictor_jimenez
-import percytheperceptron.predictor
+import percytheperceptron.{predictor, predictor_delayed_train, predictor_jimenez, predictor_jimenez_delayed_train}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -470,8 +469,10 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
             val history = SInt(historyWidth bits)
           }
 
-          //val perceptron = new predictor_jimenez(32, 62, 2, 10, 10, -1, 1, 0, 1, 127)
-          val perceptron = new predictor(32, 62, 16, 10, 10, -1, 1, 0, 2)
+          //val perceptron = new predictor_jimenez(32, 62, 128, 10, 10, -1, 1, 0, 2, 127)
+          //val perceptron = new predictor_jimenez_delayed_train(32, 62, 12, 10, 10, -1, 1, 0, 2, 127)
+          //val perceptron = new predictor(32, 62, 16, 10, 10, -1, 1, 0, 2)
+          val perceptron = new predictor_delayed_train(32, 62, 16, 10, 10, -1, 1, 0, 2)
 
           val historyCache = Mem(BranchPredictorLine(), 1 << historyRamSizeLog2)
           val historyWrite = historyCache.writePort
