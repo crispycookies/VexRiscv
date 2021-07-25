@@ -500,12 +500,12 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
           val moreJump = decodePrediction.rsp.wasWrong ^ branchContext.prediction
 
           when(decodePrediction.rsp.wasWrong && branchContext.prediction) {
-            perceptron.io.taken := 1
+            perceptron.io.taken := 0
           } otherwise {
             when (decodePrediction.rsp.wasWrong && branchContext.prediction === False) {
               perceptron.io.taken := 1
             } otherwise {
-              perceptron.io.taken := 0
+              perceptron.io.taken := branchContext.prediction ? U(1) | U(0)
             }
           }
 
