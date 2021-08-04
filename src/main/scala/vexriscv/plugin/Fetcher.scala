@@ -508,40 +508,18 @@ abstract class IBusFetcherImpl(val resetVector : BigInt,
           val moreJump = decodePrediction.rsp.wasWrong ^ branchContext.line.history.msb
 
           val GHR = new history_table(32, 62)
-
-          val actual = UInt(32 bits)
-
+          val percy = new perceptron(32, 62, -1, 1, 0)
+          val trainer = new jimenez_trainer(32, 62, 127)
+          val actual = UInt(1 bits)
 
 
           when (decodePrediction.rsp.wasWrong) {
-            actual := 1
-            GHR.io.taken := 1
+            actual := (branchContext.line.predicted === 1) ? U(0) | U(1)
+            GHR.io.taken := (branchContext.line.predicted === 1) ? U(0) | U(1)
           } otherwise {
-            actual := 0
-            GHR.io.taken := 0
+            actual := (branchContext.line.predicted === 1) ? U(1) | U(0)
+            GHR.io.taken := (branchContext.line.predicted === 1) ? U(1) | U(0)
           }
-
-          /*when(decodePrediction.rsp.wasWrong && branchContext.prediction) {
-            actual := 1
-            GHR.io.taken := 1
-          } otherwise {
-            when (decodePrediction.rsp.wasWrong && branchContext.prediction === False) {
-              actual := 0
-              GHR.io.taken := 0
-            } otherwise {
-
-              when (branchContext.prediction) {
-                actual := 0
-                GHR.io.taken := 0
-              } otherwise {
-                actual := 0
-                GHR.io.taken :=0
-              }
-            }
-          }*/
-
-          val percy = new perceptron(32, 62, -1, 1, 0)
-          val trainer = new jimenez_trainer(32, 62, 127)
 
           percy.io.weights := trainer.io.new_weigths
           percy.io.bias := trainer.io.bias_new
@@ -568,7 +546,7 @@ abstract class IBusFetcherImpl(val resetVector : BigInt,
 
           historyWrite.data.history := branchContext.line.history + (moreJump ? S(-1) | S(1))
           val sat = (branchContext.line.history === (moreJump ? S(branchContext.line.history.minValue) | S(branchContext.line.history.maxValue)))
-          historyWrite.valid := !branchContext.hazard && branchStage.arbitration.isFiring && branchStage.input(BRANCH_CTRL) === BranchCtrlEnum.B && percy.io.prediction =/= 1
+          historyWrite.valid :=  percy.io.prediction =/= 1
         })
 
 
