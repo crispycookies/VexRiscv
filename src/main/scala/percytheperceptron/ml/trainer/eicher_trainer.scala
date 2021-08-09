@@ -27,21 +27,24 @@ class eicher_trainer(bit_width: Int, feature_count: Int, threshold: Int) extends
       io.bias_new := -threshold
     }
   }
-
-  for (i <- 0 until feature_count) {
-    when(io.actual === io.current_data(i)) {
-      when(io.current_weights(i) >= threshold) {
-        io.new_weigths(i) := threshold
+  when(io.predicted_numerical < threshold && io.predicted_numerical > threshold) {
+    for (i <- 0 until feature_count) {
+      when(io.actual === io.current_data(i)) {
+        when(io.current_weights(i) >= threshold) {
+          io.new_weigths(i) := threshold
+        } otherwise {
+          io.new_weigths(i) := io.current_weights(i) + 1
+        }
       } otherwise {
-        io.new_weigths(i) := io.current_weights(i) + 1
-      }
-    } otherwise {
-      when(io.current_weights(i) <= -threshold) {
-        io.new_weigths(i) := -threshold
-      } otherwise {
-        io.new_weigths(i) := io.current_weights(i) - 1
+        when(io.current_weights(i) <= -threshold) {
+          io.new_weigths(i) := -threshold
+        } otherwise {
+          io.new_weigths(i) := io.current_weights(i) - 1
+        }
       }
     }
+  } otherwise {
+    io.new_weigths := io.current_weights
   }
 }
 

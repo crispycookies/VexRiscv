@@ -466,15 +466,15 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
         def historyWidth = 2
         val dynamic = ifGen(prediction == DYNAMIC)(new Area {
           case class BranchPredictorLine() extends Bundle {
-            val history = SInt(historyWidth bits)
+            val prediction = UInt(1 bits)
           }
 
           //val perceptron = new predictor_jimenez(32, 62, 128, 10, 10, -1, 1, 0, 2, 127)
-          //val perceptron = new predictor_jimenez_delayed_train(32, 62, 12, 10, 10, -1, 1, 0, 2, 127)
+          val predictor = new predictor_jimenez_delayed_train(32, 62, 32, 32, 10, -1, 1, 0, 2, 127)
           //val perceptron = new predictor(32, 62, 16, 10, 10, -1, 1, 0, 2)
-          val perceptron = new predictor_delayed_train(32, 62, 16, 10, 10, -1, 1, 0, 2)
+          //val perceptron = new predictor_delayed_train(32, 62, 16, 10, 10, -1, 1, 0, 2)
 
-          val historyCache = Mem(BranchPredictorLine(), 1 << historyRamSizeLog2)
+          val historyCache = Mem(BranchPredictorLine(), 1)
           val historyWrite = historyCache.writePort
           val historyWriteLast = RegNextWhen(historyWrite, iBusRsp.stages(0).output.ready)
           val hazard = historyWriteLast.valid && historyWriteLast.address === (iBusRsp.stages(0).input.payload >> 2).resized
@@ -488,7 +488,7 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
           val fetchContext = DynamicContext()
           fetchContext.hazard := hazard
           fetchContext.line := historyCache.readSync((fetchPc.output.payload >> 2).resized, iBusRsp.stages(0).output.ready || externalFlush)
-          fetchContext.prediction := perceptron.io.prediction === 1
+          fetchContext.prediction := predictor.io.prediction === 1
 
           object PREDICTION_CONTEXT extends Stageable(DynamicContext())
 
@@ -499,29 +499,30 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
           val branchContext = branchStage.input(PREDICTION_CONTEXT)
           val moreJump = decodePrediction.rsp.wasWrong ^ branchContext.prediction
 
-          when(decodePrediction.rsp.wasWrong && branchContext.prediction) {
-            perceptron.io.taken := 0
+          //perceptron.io.taken := decodePrediction.rsp.wasWrong ? U(1) | U(0)
+
+          val test = (predictor.io.delayed_prediction===1)^decodePrediction.rsp.wasWrong
+          predictor.io.taken := test ? U(1)| U(0)
+
+          /*when (decodePrediction.rsp.wasWrong) {
+            predictor.io.taken := test ? U(1)| U(0)
           } otherwise {
-            when (decodePrediction.rsp.wasWrong && branchContext.prediction === False) {
-              perceptron.io.taken := 1
-            } otherwise {
-              perceptron.io.taken := branchContext.prediction ? U(1) | U(0)
-            }
-          }
+            predictor.io.taken := (predictor.io.delayed_prediction === 1) ? U(0) | U(1)
+          }*/
 
-          val addr = branchStage.input(PC)(2, historyRamSizeLog2 bits) + (if (pipeline.config.withRvc)
-            ((!branchStage.input(IS_RVC) && branchStage.input(PC)(1)) ? U(1) | U(0))
-          else
-            U(0))
 
-          historyWrite.address := addr
+          // val addr =
 
-          historyWrite.data.history := branchContext.line.history + (moreJump ? S(-1) | S(1))
+          //historyWrite.address := addr
 
-          perceptron.io.address := addr
+          //historyWrite.data.history := branchContext.line.history + (moreJump ? S(-1) | S(1))
+          historyWrite.data.prediction := predictor.io.prediction
+
+
+          predictor.io.address := branchStage.input(PC)(0, 32 bits)
 
           //val sat = (branchContext.line.history === (moreJump ? S(branchContext.line.history.minValue) | S(branchContext.line.history.maxValue)))
-          historyWrite.valid := !branchContext.hazard && branchStage.arbitration.isFiring && branchStage.input(BRANCH_CTRL) === BranchCtrlEnum.B && perceptron.io.prediction === 1
+          historyWrite.valid := True//perceptron.io.prediction =/= 1
         })
 
 
