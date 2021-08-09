@@ -15,7 +15,6 @@ class weight_table(bit_width: Int, feature_count: Int, table_size : Int, address
     val bias_out = out SInt(bit_width bits)
   }
   val mem = new register_file(address_bit_width, bit_width, table_size, feature_count + 1)
-  // TODO
   mem.io.address_write := io.address_write
   mem.io.address_read := io.address_read
   mem.io.write_ena_user := 1

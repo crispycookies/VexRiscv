@@ -469,10 +469,7 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
             val prediction = UInt(1 bits)
           }
 
-          //val perceptron = new predictor_jimenez(32, 62, 128, 10, 10, -1, 1, 0, 2, 127)
-          val predictor = new predictor_jimenez_delayed_train(32, 62, 32, 32, 10, -1, 1, 0, 2, 127)
-          //val perceptron = new predictor(32, 62, 16, 10, 10, -1, 1, 0, 2)
-          //val perceptron = new predictor_delayed_train(32, 62, 16, 10, 10, -1, 1, 0, 2)
+          val predictor = new predictor_jimenez_delayed_train(32, 1024, 2, 32, 10, -1, 1, 0, 2, 128)
 
           val historyCache = Mem(BranchPredictorLine(), 1)
           val historyWrite = historyCache.writePort
@@ -504,18 +501,6 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
           val test = (predictor.io.delayed_prediction===1)^decodePrediction.rsp.wasWrong
           predictor.io.taken := test ? U(1)| U(0)
 
-          /*when (decodePrediction.rsp.wasWrong) {
-            predictor.io.taken := test ? U(1)| U(0)
-          } otherwise {
-            predictor.io.taken := (predictor.io.delayed_prediction === 1) ? U(0) | U(1)
-          }*/
-
-
-          // val addr =
-
-          //historyWrite.address := addr
-
-          //historyWrite.data.history := branchContext.line.history + (moreJump ? S(-1) | S(1))
           historyWrite.data.prediction := predictor.io.prediction
 
 

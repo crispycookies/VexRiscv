@@ -34,67 +34,46 @@ class predictor_jimenez_delayed_train(bit_width: Int, feature_count: Int, table_
     }
     scaled
   }
+  // prediction related
+  val ghr = new history_table(bit_width = bit_width, feature_count = feature_count)
+  ghr.io.taken := io.taken
 
-  val indexer = new mod_read_write_index(address_bit_width = address_bit_width, index_bit_width = index_bit_width, table_size = table_size, delay = delay)
-  val predictor_perceptron = new perceptron(bit_width = bit_width, feature_count = feature_count, lower_bound = lower_bound, upper_bound = upper_bound, zero = zero);
-  val history = new history_table(bit_width = bit_width, feature_count = feature_count)
-  val history_trainer_delayed = new delay_vector(bit_width = bit_width, feature_count = feature_count, delay = delay)
-  val table = new weight_table(bit_width = bit_width, feature_count = feature_count, table_size = table_size, address_bit_width = index_bit_width)
-  val trainer_perceptron = new eicher_trainer(bit_width = bit_width, feature_count = feature_count, threshold = threshold)
+  val hash = new mod_index(address_bit_width = address_bit_width, index_bit_width = index_bit_width, table_size = table_size)
+  hash.io.address := io.address
 
-  val delayed_prediction = new shift_register(bit_width = bit_width, depth = delay)
-  val delayed_prediction_numerical = new shift_register(bit_width = bit_width, depth = delay)
-  val delayed_taken = new shift_register(bit_width = 3, depth = delay)
-  val delayed_weights_and_bias = new delay_perceptron(bit_width, feature_count, delay)
+  val pt = new weight_table(bit_width = bit_width, feature_count = feature_count, table_size = table_size, address_bit_width = index_bit_width)
+  pt.io.address_read := hash.io.index
 
-  delayed_prediction.io.input := predictor_perceptron.io.prediction
-  delayed_prediction_numerical.io.input := predictor_perceptron.io.prediction_numeric
+  val comb_perceptron = new perceptron(bit_width = bit_width, feature_count = feature_count, lower_bound = lower_bound, upper_bound = upper_bound, zero = zero)
+  comb_perceptron.io.bias := pt.io.bias_out
+  comb_perceptron.io.weights := pt.io.weights_out
+  comb_perceptron.io.values := ghr.io.history
 
-  when(io.taken === 1) {
-    delayed_taken.io.input := S(1)
-  } otherwise {
-    delayed_taken.io.input := S(0)
-  }
+  // delay related
+  val delay_by_n = new delay_unit(bit_width = bit_width, feature_count = feature_count, delay = delay, index_bit_width = index_bit_width)
+  delay_by_n.io.inbias := pt.io.bias_out
+  delay_by_n.io.inweights := pt.io.weights_out
+  delay_by_n.io.inghr := ghr.io.history
+  delay_by_n.io.inpred := comb_perceptron.io.prediction
+  delay_by_n.io.inpred_num := comb_perceptron.io.prediction_numeric
+  delay_by_n.io.inaddress := hash.io.index
 
-  when(delayed_taken.io.output === 1) {
-    history_trainer_delayed.io.taken := U(1)
-  } otherwise {
-    history_trainer_delayed.io.taken := U(0)
-  }
+  // training related
+  val trainer = new jimenez_trainer(bit_width = bit_width, feature_count = feature_count, threshold = threshold)
+  trainer.io.predicted := delay_by_n.io.outpred
+  trainer.io.predicted_numerical := delay_by_n.io.outpred_num
+  trainer.io.actual := map_to_value(io.taken)
+  trainer.io.bias_old := delay_by_n.io.outbias
+  trainer.io.current_weights := delay_by_n.io.outweights
+  trainer.io.current_data := delay_by_n.io.outghr
 
+  // write back
+  pt.io.address_write := delay_by_n.io.outaddress
+  pt.io.weights_in := trainer.io.new_weigths
+  pt.io.bias_in := trainer.io.bias_new
 
-
-  // History Wiring
-  // Store History
-  history.io.taken := io.taken
-  // Give trainer the History for training
-  trainer_perceptron.io.current_data := history_trainer_delayed.io.history
-  predictor_perceptron.io.values := history.io.history
-
-  // Index
-  indexer.io.address := io.address
-
-  table.io.address_write := indexer.io.index_write
-  table.io.address_read := indexer.io.index_read
-
-  delayed_weights_and_bias.io.inbias := table.io.bias_out
-  delayed_weights_and_bias.io.inweights := table.io.weights_out
-
-  // Table
-  table.io.bias_in := trainer_perceptron.io.bias_new
-  table.io.weights_in := trainer_perceptron.io.new_weigths
-  predictor_perceptron.io.weights := table.io.weights_out
-  trainer_perceptron.io.current_weights := delayed_weights_and_bias.io.outweights
-  trainer_perceptron.io.bias_old := delayed_weights_and_bias.io.outbias
-  predictor_perceptron.io.bias := table.io.bias_out
-
-  // Trainer
-  trainer_perceptron.io.actual := map_to_value(io.taken)
-  // taken is delayed by at last 1 cycle, hence delay prediction as well
-  trainer_perceptron.io.predicted := delayed_prediction.io.output
-  trainer_perceptron.io.predicted_numerical := delayed_prediction_numerical.io.output
-
-  io.prediction := unmap_from_value(predictor_perceptron.io.prediction)
-  io.delayed_prediction := unmap_from_value(delayed_prediction.io.output)
+  // output
+  io.prediction := unmap_from_value(comb_perceptron.io.prediction)
+  io.delayed_prediction := unmap_from_value(delay_by_n.io.outpred)
 }
 

@@ -53,7 +53,7 @@ class DhrystoneBench extends FunSuite {
   getDmips(
     name = "GenFull",
     gen = GenFull.main(null),
-    testCmd = "make clean run REDO=10 CSR=no MMU=no  COREMARK=yes TRACE=yes"
+    testCmd = "make clean run REDO=10 CSR=no MMU=no  COREMARK=yes TRACE=no"
   )
 
   test("final_report") {
