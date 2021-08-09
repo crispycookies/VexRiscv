@@ -469,7 +469,7 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
             val prediction = UInt(1 bits)
           }
 
-          val predictor = new predictor_jimenez_delayed_train(32, 1024, 2, 32, 10, -1, 1, 0, 2, 128)
+          val predictor = new predictor_jimenez_delayed_train(32, 59, 1024, 32, 10, -1, 1, 0, 2, 128)
 
           val historyCache = Mem(BranchPredictorLine(), 1)
           val historyWrite = historyCache.writePort

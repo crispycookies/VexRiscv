@@ -17,16 +17,32 @@ class jimenez_trainer(bit_width: Int, feature_count: Int, threshold: Int) extend
   when(io.actual =/= io.predicted || (io.predicted_numerical <= threshold && io.predicted_numerical >= -threshold)) {
 
     when(io.actual === 1) {
-      io.bias_new := io.bias_old + 1
+      when(io.bias_old < threshold) {
+        io.bias_new := io.bias_old + 1
+      } otherwise {
+        io.bias_new := io.bias_old
+      }
     } otherwise {
-      io.bias_new := io.bias_old - 1
+      when(io.bias_old > -threshold) {
+        io.bias_new := io.bias_old - 1
+      } otherwise {
+        io.bias_new := io.bias_old
+      }
     }
 
     for (i <- 0 until feature_count) {
       when(io.actual === io.current_data(i)) {
-        io.new_weigths(i) := io.current_weights(i) + 1
+        when (io.current_weights(i) < threshold) {
+          io.new_weigths(i) := io.current_weights(i) + 1
+        } otherwise {
+          io.new_weigths(i) := io.current_weights(i)
+        }
       } otherwise {
-        io.new_weigths(i) := io.current_weights(i) - 1
+        when (io.current_weights(i) > -threshold) {
+          io.new_weigths(i) := io.current_weights(i) - 1
+        } otherwise {
+          io.new_weigths(i) := io.current_weights(i)
+        }
       }
     }
 
