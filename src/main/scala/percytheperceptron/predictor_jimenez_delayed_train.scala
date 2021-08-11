@@ -6,14 +6,26 @@ import percytheperceptron.memory.shift_register
 import percytheperceptron.ml.perceptron.perceptron
 import percytheperceptron.ml.trainer.{eicher_trainer, jimenez_trainer}
 
-class predictor_jimenez_delayed_train(bit_width: Int, feature_count: Int, table_size : Int, address_bit_width : Int, index_bit_width : Int, lower_bound: Int, upper_bound : Int, zero : Int, delay : Int, threshold : Int) extends Component {
+class predictor_jimenez_delayed_train(bit_width: Int,
+                                      feature_count: Int,
+                                      table_size: Int,
+                                      address_bit_width: Int,
+                                      index_bit_width: Int,
+                                      delay: Int,
+                                      threshold: Int
+                                     ) extends Component {
   val io = new Bundle {
-    val taken = in UInt(1 bits)
-    val prediction = out UInt(1 bits)
-    val delayed_prediction = out UInt(1 bits)
-    val address = in UInt(address_bit_width bits)
+    val taken = in UInt (1 bits)
+    val prediction = out UInt (1 bits)
+    val delayed_prediction = out UInt (1 bits)
+    val address = in UInt (address_bit_width bits)
   }
-  def map_to_value(taken : UInt): SInt ={
+
+  def lower_bound = -1
+  def upper_bound = 1
+  def zero = 0
+
+  def map_to_value(taken: UInt): SInt = {
     val scaled = SInt(bit_width bits)
 
     when(taken === 1) {
@@ -24,7 +36,7 @@ class predictor_jimenez_delayed_train(bit_width: Int, feature_count: Int, table_
     scaled
   }
 
-  def unmap_from_value(taken : SInt): UInt ={
+  def unmap_from_value(taken: SInt): UInt = {
     val scaled = UInt(1 bits)
 
     when(taken === upper_bound) {
@@ -34,6 +46,7 @@ class predictor_jimenez_delayed_train(bit_width: Int, feature_count: Int, table_
     }
     scaled
   }
+
   // prediction related
   val ghr = new history_table(bit_width = bit_width, feature_count = feature_count)
   ghr.io.taken := io.taken

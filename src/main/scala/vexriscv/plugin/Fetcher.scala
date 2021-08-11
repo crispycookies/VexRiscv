@@ -463,51 +463,26 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
     val predictor = prediction match {
       case NONE =>
       case STATIC | DYNAMIC => {
-        def historyWidth = 2
         val dynamic = ifGen(prediction == DYNAMIC)(new Area {
-          case class BranchPredictorLine() extends Bundle {
-            val prediction = UInt(1 bits)
-          }
-
-          val predictor = new predictor_jimenez_delayed_train(32, 59, 1024, 32, 10, -1, 1, 0, 2, 128)
-
-          val historyCache = Mem(BranchPredictorLine(), 1)
-          val historyWrite = historyCache.writePort
-          val historyWriteLast = RegNextWhen(historyWrite, iBusRsp.stages(0).output.ready)
-          val hazard = historyWriteLast.valid && historyWriteLast.address === (iBusRsp.stages(0).input.payload >> 2).resized
-
+          val predictor = new predictor_jimenez_delayed_train(32, 59, 1, 32, 10, 2, 128)
+          // This is used to signalize that a branch was taken
           case class DynamicContext() extends Bundle {
-            val hazard = Bool
-            val prediction = Bool
-            val line = BranchPredictorLine()
+            val prediction = UInt(1 bit)
           }
-
           val fetchContext = DynamicContext()
-          fetchContext.hazard := hazard
-          fetchContext.line := historyCache.readSync((fetchPc.output.payload >> 2).resized, iBusRsp.stages(0).output.ready || externalFlush)
-          fetchContext.prediction := predictor.io.prediction === 1
+          // required for VexRiscv's infrastructure
+          fetchContext.prediction := predictor.io.prediction
 
           object PREDICTION_CONTEXT extends Stageable(DynamicContext())
-
           decode.insert(PREDICTION_CONTEXT) := stage1ToInjectorPipe(fetchContext)._3
-          val decodeContextPrediction = decode.input(PREDICTION_CONTEXT).prediction
-
+          val decodeContextPrediction = decode.input(PREDICTION_CONTEXT).prediction === 1
           val branchStage = decodePrediction.stage
-          val branchContext = branchStage.input(PREDICTION_CONTEXT)
-          val moreJump = decodePrediction.rsp.wasWrong ^ branchContext.prediction
 
-          //perceptron.io.taken := decodePrediction.rsp.wasWrong ? U(1) | U(0)
-
-          val test = (predictor.io.delayed_prediction===1)^decodePrediction.rsp.wasWrong
-          predictor.io.taken := test ? U(1)| U(0)
-
-          historyWrite.data.prediction := predictor.io.prediction
-
-
+          // get if a branch was taken
+          val taken = (predictor.io.delayed_prediction===1)^decodePrediction.rsp.wasWrong
+          predictor.io.taken := taken ? U(1)| U(0)
+          // PC-address
           predictor.io.address := branchStage.input(PC)(0, 32 bits)
-
-          //val sat = (branchContext.line.history === (moreJump ? S(branchContext.line.history.minValue) | S(branchContext.line.history.maxValue)))
-          historyWrite.valid := True//perceptron.io.prediction =/= 1
         })
 
 
