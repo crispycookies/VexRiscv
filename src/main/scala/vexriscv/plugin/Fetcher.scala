@@ -464,7 +464,7 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
       case NONE =>
       case STATIC | DYNAMIC => {
         val dynamic = ifGen(prediction == DYNAMIC)(new Area {
-          val predictor = new predictor_jimenez_delayed_train(7, 12, 90, 32, 10, 2, 37)
+          val predictor = new predictor_jimenez_delayed_train(8, 59, 546, 32, 10, 3, 127)
           // This is used to signalize that a branch was taken
           case class DynamicContext() extends Bundle {
             val prediction = UInt(1 bit)
