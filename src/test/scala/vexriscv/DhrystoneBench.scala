@@ -9,6 +9,7 @@ import vexriscv.demo._
 import scala.sys.process._
 
 class DhrystoneBench extends FunSuite {
+  var it = 0
   def doCmd(cmd: String): String = {
     val stdOut = new StringBuilder()
     class Logger extends ProcessLogger {
@@ -31,11 +32,12 @@ class DhrystoneBench extends FunSuite {
 
   def getDmips(name: String, gen: => Unit, testCmd: String): Unit = {
     var genPassed = false
-    test(name + "_gen") {
+    it += 1
+    test(name + "_gen" + it) {
       gen
       genPassed = true
     }
-    test(name + "_test") {
+    test(name + "_test" + it) {
       assert(genPassed)
       val str = doCmd(testCmd)
       assert(!str.contains("FAIL"))
@@ -50,6 +52,61 @@ class DhrystoneBench extends FunSuite {
 
   }
 
+  getDmips(
+    name = "GenFull",
+    gen = GenFull.main(null),
+    testCmd = "make clean run REDO=10 CSR=no MMU=no  COREMARK=yes TRACE=no"
+  )
+  getDmips(
+    name = "GenFull",
+    gen = GenFull.main(null),
+    testCmd = "make clean run REDO=10 CSR=no MMU=no  COREMARK=yes TRACE=no"
+  )
+  getDmips(
+    name = "GenFull",
+    gen = GenFull.main(null),
+    testCmd = "make clean run REDO=10 CSR=no MMU=no  COREMARK=yes TRACE=no"
+  )
+  getDmips(
+    name = "GenFull",
+    gen = GenFull.main(null),
+    testCmd = "make clean run REDO=10 CSR=no MMU=no  COREMARK=yes TRACE=no"
+  )
+  getDmips(
+    name = "GenFull",
+    gen = GenFull.main(null),
+    testCmd = "make clean run REDO=10 CSR=no MMU=no  COREMARK=yes TRACE=no"
+  )
+  getDmips(
+    name = "GenFull",
+    gen = GenFull.main(null),
+    testCmd = "make clean run REDO=10 CSR=no MMU=no  COREMARK=yes TRACE=no"
+  )
+  getDmips(
+    name = "GenFull",
+    gen = GenFull.main(null),
+    testCmd = "make clean run REDO=10 CSR=no MMU=no  COREMARK=yes TRACE=no"
+  )
+  getDmips(
+    name = "GenFull",
+    gen = GenFull.main(null),
+    testCmd = "make clean run REDO=10 CSR=no MMU=no  COREMARK=yes TRACE=no"
+  )
+  getDmips(
+    name = "GenFull",
+    gen = GenFull.main(null),
+    testCmd = "make clean run REDO=10 CSR=no MMU=no  COREMARK=yes TRACE=no"
+  )
+  getDmips(
+    name = "GenFull",
+    gen = GenFull.main(null),
+    testCmd = "make clean run REDO=10 CSR=no MMU=no  COREMARK=yes TRACE=no"
+  )
+  getDmips(
+    name = "GenFull",
+    gen = GenFull.main(null),
+    testCmd = "make clean run REDO=10 CSR=no MMU=no  COREMARK=yes TRACE=no"
+  )
   getDmips(
     name = "GenFull",
     gen = GenFull.main(null),
