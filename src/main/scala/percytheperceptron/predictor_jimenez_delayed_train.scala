@@ -60,7 +60,11 @@ class predictor_jimenez_delayed_train(bit_width: Int,
   val comb_perceptron = new perceptron(bit_width = bit_width, feature_count = feature_count, lower_bound = lower_bound, upper_bound = upper_bound, zero = zero)
   comb_perceptron.io.bias := pt.io.bias_out
   comb_perceptron.io.weights := pt.io.weights_out
-  comb_perceptron.io.values := ghr.io.history
+
+  for (i <- 0 until feature_count) {
+    comb_perceptron.io.values(i) := map_to_value(ghr.io.history(i).asUInt)
+  }
+
 
   // delay related
   val delay_by_n = new delay_unit(bit_width = bit_width, feature_count = feature_count, delay = delay, index_bit_width = index_bit_width)

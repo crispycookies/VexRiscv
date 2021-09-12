@@ -464,13 +464,14 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
       case NONE =>
       case STATIC | DYNAMIC => {
         val dynamic = ifGen(prediction == DYNAMIC)(new Area {
-          val predictor = new predictor_jimenez_delayed_train(bit_width = 7,
-            feature_count = 12,
-            table_size = 90,
+          // 32 KB
+          val predictor = new predictor_jimenez_delayed_train(bit_width = 8,
+            feature_count = 59,
+            table_size = 546,
             address_bit_width = 30,
             index_bit_width = 10,
             delay = 2,
-            threshold =37)
+            threshold =127)
           // This is used to signalize that a branch was taken
           case class DynamicContext() extends Bundle {
             val prediction = UInt(1 bit)
@@ -485,7 +486,7 @@ abstract class IBusFetcherImpl(val resetVector: BigInt,
           val branchStage = decodePrediction.stage
 
           // get if a branch was taken
-          val taken = decodePrediction.cmd.hadBranch
+          val taken = (predictor.io.delayed_prediction===1)^decodePrediction.rsp.wasWrong
           predictor.io.taken := taken ? U(1)| U(0)
           // PC-address
           predictor.io.address := branchStage.input(PC)(2, 30 bits)

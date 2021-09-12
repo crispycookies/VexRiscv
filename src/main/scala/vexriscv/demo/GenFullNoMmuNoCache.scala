@@ -16,7 +16,7 @@ object GenFullNoMmuNoCache extends App{
           resetVector = 0x80000000l,
           cmdForkOnSecondStage = false,
           cmdForkPersistence = false,
-          prediction = STATIC,
+          prediction = DYNAMIC,
           catchAccessFault = false,
           compressedGen = false
         ),
